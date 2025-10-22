@@ -10,7 +10,7 @@ creado por: Victor Becerra--- github: BecerraSoftware
 
 /*
 PINES QUE NO ESTAN FUNCANDO
-A4, A6, A7
+A3, A5
 
 PINES EN USO
 S1=>A0
@@ -21,17 +21,18 @@ S8=>A7
 */
 //Cuenta con 3 Sensores al frente para detectar 3 posiciones distintas
 #define delLeft A2
-#define delRigh A5
-#define delForward A3  //A4
+#define delRigh A5 
+#define delForward A4
+
 
 //Cuenta con 2 Sensores a los costados para detectar si esta de lado o una orientacion
-#define sensorRigh A6 //NOSE
+#define sensorRigh A6 
 #define sensorLeft A1
 
 
 //Cuenta con dos sensores de piso que detectan el color blanco para no salir del ring
-#define floorLeft A7
-#define floorRigh A0
+#define floorLeft A0
+#define floorRigh A7 
 
 //Pines de motores
 #define MPos_Left 9
@@ -97,14 +98,14 @@ void setup() {
   delay(200);//quitar esto si es necesario
 
   //Avanzar hasta que detecte la linea despues gira y ataca 
-  if(ButonPush(DipSwith1)&&!ButonPush(DipSwith2)){ 
+  /*if(ButonPush(DipSwith1)&&!ButonPush(DipSwith2)){ 
     while(!DetectaBlanco(floorRigh) || !DetectaBlanco(floorLeft)){
     Avanzar(120,0);
   }
   Avanzar(200,4);
   }
   stop();
-  delay(5);
+  delay(5);*/
 }
 
 bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
@@ -113,10 +114,17 @@ bool DetectarObstaculo(int pin){return digitalRead(pin)==HIGH;}
 int LeerSensor(int pin){return digitalRead(pin);}
 bool ButonPush(int buton){return digitalRead(buton)==1;}
 
-void loopDEV(){
+void loopProbarSensoresdePiso(){
+  Serial.println(DetectarPiso(floorRigh));
+}
+void loop(){
+  Serial.print("Sensor: ");
+  Serial.print(LeerSensor(delRigh));
+  Serial.print("   Sensor: ");
+  Serial.print(LeerSensor(delForward));
+  Serial.print("   Sensor: ");
+  Serial.println(LeerSensor(sensorLeft));
 
-Serial.println(DetectarPiso(floorLeft));
-  
 }
 void loopxd(){
 
@@ -130,9 +138,6 @@ void loopxd(){
       if(!DetectarObstaculo(delRigh)){break;}
   }
   stop();
-    
-  
-
   }
 }
 void Evadir(float velocidad,int opcion){
@@ -245,7 +250,7 @@ void loopMotor(){
 }
 
 //loopPrincipal
-void loop(){
+void loopMAIN(){
    if(DetectaBlanco(floorRigh) || DetectaBlanco(floorLeft)) {
      Avanzar(80,4);
   } else {
