@@ -33,8 +33,8 @@ VL53L0X sensor;
 #define sensorLeft A1
 
 //Cuenta con dos sensores de piso que detectan el color blanco para no salir del ring
-#define floorLeft A7
-#define floorRigh A0
+#define floorLeft A0
+#define floorRigh A7
 
 //Pines de motores
 #define MPos_Left 9
@@ -80,8 +80,6 @@ void setup() {
   Serial.println("Sensor VL53L0X iniciado en modo continuo");
   delay(2000);
 
-  // Configura un tiempo máximo de respuesta (solo para detectar errores)
-
  
   
   //SENSORES
@@ -112,25 +110,25 @@ void setup() {
 
   //leds de prueba
   pinMode(11,OUTPUT);
-
-  //Avanzar hasta que detecte la linea despues gira y ataca 
-  /*if(ButonPush(DipSwith1)&&!ButonPush(DipSwith2)){ 
-    while(!DetectaBlanco(floorRigh) || !DetectaBlanco(floorLeft)){
-    Avanzar(120,0);
-  }
-  Avanzar(200,4);
-  }
-  stop();*/
-
+    
+  
+  stop();
   Serial.begin(9600); // Monitor serial
-  delay(200);//quitar esto si es necesario
+  delay(2000);//quitar esto si es necesario
 }
 
 bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
 int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
 bool ButonPush(int buton){return digitalRead(buton)==1;}
+bool Vl53x(int distancia){return distancia<200?true:false;}
 
+void loopSens(){
+  Serial.print(DetectarPiso(floorLeft));
+  Serial.print(" ");
+  Serial.print(DetectarPiso(floorRigh));
+  Serial.println(" ");
+}
 void loopSensor(){
    // Lee el valor más reciente sin bloquear el programa
   uint16_t distancia = sensor.readRangeContinuousMillimeters();
@@ -272,41 +270,43 @@ void loopMotores(){
 //loopPrincipal
 void loop(){
   uint16_t distancia = sensor.readRangeContinuousMillimeters();
-   if(DetectaBlanco(floorRigh) || DetectaBlanco(floorLeft)) {
-     Avanzar(80,4);
-  } else {
-    
-  if (distancia<100) {
-    Avanzar(255, 0);   // Opción 0: avanzar recto
+  
+  Serial.print(DetectarPiso(floorLeft));
+  Serial.print(" ");
+  Serial.print(DetectarPiso(floorRigh));
+  Serial.println(" ");
+  if (Vl53x(distancia)) {
+    Avanzar(100, 0);   // Opción 0: avanzar recto
     Serial.println("avanzar");
   }
   // Si no, si el sensor izquierdo detecta, gira a la derecha (para buscar que el frontal se alinee)
-  else if (DetectarObstaculo(delLeft)&& !DetectarObstaculo(delForward)) {
-    Avanzar(80, 2);   // Opción 2: giro a la derecha
+  else if (DetectarObstaculo(delLeft)&& !Vl53x(distancia)) {
+    Avanzar(50, 2);   // Opción 2: giro a la derecha
     Serial.println("activar izquierda");
   }
   // Si no, si el sensor derecho detecta, gira a la izquierda
-  else if (DetectarObstaculo(delRigh)&&!DetectarObstaculo(delForward)) {
-    Avanzar(80, 1);   // Opción 1: giro a la izquierda
+  else if (DetectarObstaculo(delRigh)&&!Vl53x(distancia)) {
+    Avanzar(50, 1);   // Opción 1: giro a la izquierda
     Serial.println("giro derecha");
   }
-  else if(DetectarObstaculo(delLeft)&&DetectarObstaculo(delForward)||DetectarObstaculo(delRigh)&&DetectarObstaculo(delForward)){
-     Avanzar(80, 0);   // Opción 0: avanzar recto
+  else if(DetectarObstaculo(delLeft)&&Vl53x(distancia)||DetectarObstaculo(delRigh)&&Vl53x(distancia)){
+     Avanzar(50, 0);   // Opción 0: avanzar recto
     Serial.println("avanzar");
   }
-  // Si ningún sensor detecta, gira en el sitio lentamente (buscando la señal del frontal)
+  else if(DetectaBlanco(floorRigh) || DetectaBlanco(floorLeft)) {
+     Avanzar(50,4);
+     Serial.println("ver atras");
+
+  }
   else {
-    if(ButonPush(DipSwith2)){
-      Avanzar(80,0);
-    }
-    else{
-    Avanzar(80, 3);   // Opción 3: giro en el sitio
+    Avanzar(50, 3);   // Opción 3: giro en el sitio
     Serial.println("girar sitio");}
-  }
-  }
+
+    
   delay(10);
+  }
   
-}
+  
 void Atras(float velocidad,int tiempo){
               digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
@@ -316,6 +316,7 @@ void Atras(float velocidad,int tiempo){
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
         delay(tiempo);
+        stop();
 }
 void stop(){
   digitalWrite(MPos_Left,LOW);
@@ -387,15 +388,15 @@ void Avanzar(float velocidad, int opcion){
       case 4: //rutina cuando vea la linea
 
       Atras(140,1000);
-        digitalWrite(MPos_Left, HIGH);
+
+      digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
 
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
-
-      delay(100);
+      delay(1000);
 
 
 
