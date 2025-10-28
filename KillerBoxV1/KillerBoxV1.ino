@@ -11,26 +11,8 @@ VL53L0X sensor;
   creado por: Victor Becerra--- github: BecerraSoftware
 */
 
-/*
-  PINES QUE NO ESTAN FUNCANDO
-  A4, A6, A7
-
-  PINES EN USO
-  S1=>A0
-  S2=>A1
-  S3=>A2
-  S4=>A3
-  S8=>A7
-*/
-
-//Cuenta con 3 Sensores al frente para detectar 3 posiciones distintas
 #define delLeft A2
 #define delRigh A6
-#define delForward 12 //
-
-//Cuenta con 2 Sensores a los costados para detectar si esta de lado o una orientacion
-#define sensorRigh A1 //NOSE
-#define sensorLeft A1
 
 //Cuenta con dos sensores de piso que detectan el color blanco para no salir del ring
 #define floorLeft A0
@@ -83,13 +65,8 @@ void setup() {
  
   
   //SENSORES
-  pinMode(delForward,INPUT);
   pinMode(delRigh,INPUT);
   pinMode(delLeft,INPUT);
-  pinMode(sensorRigh,INPUT);
-  pinMode(sensorLeft,INPUT);
-
-
   //Sensores de piso
   pinMode(floorRigh,INPUT);
   pinMode(floorLeft,INPUT);
@@ -102,33 +79,62 @@ void setup() {
   pinMode(MPos_Left,OUTPUT);
   pinMode(MNeg_Left,OUTPUT);
   pinMode(PWM_LEFT,OUTPUT);
+  
+  stop();
 
   //dipswith
   pinMode(DipSwith1,INPUT);
   pinMode(DipSwith2,INPUT);
-
-
-  //leds de prueba
-  pinMode(11,OUTPUT);
-    
   
-  stop();
   Serial.begin(9600); // Monitor serial
+
+
+
+  
   delay(2000);//quitar esto si es necesario
 }
 
 bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
 int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
-bool ButonPush(int buton){return digitalRead(buton)==1;}
 bool Vl53x(int distancia){return distancia<200?true:false;}
-
-void loopSens(){
-  Serial.print(DetectarPiso(floorLeft));
-  Serial.print(" ");
-  Serial.print(DetectarPiso(floorRigh));
-  Serial.println(" ");
+void loop(){
+  
 }
+void loopnasnank(){
+   /*
+    Función Avanzar:
+    - velocidad: valor PWM (0 a 255)
+    - opcion:
+       0 -> ambos motores hacia adelante (avance)
+       1 -> giro a la izquierda: motor izquierdo en reversa, motor derecho hacia adelante
+       2 -> giro a la derecha: motor izquierdo hacia adelante, motor derecho en reversa
+       3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
+       4 -> rutina cuando vea la linea.
+       */
+  uint16_t distancia = sensor.readRangeContinuousMillimeters();
+
+  Serial.println(distancia);
+  if(Vl53x(distancia)){
+    Avanzar(250,0);
+  }else{
+    stop();
+    Avanzar(50,3);
+  }
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
 void loopSensor(){
    // Lee el valor más reciente sin bloquear el programa
   uint16_t distancia = sensor.readRangeContinuousMillimeters();
@@ -141,7 +147,7 @@ void loopSensor(){
   Serial.print("  ");
   Serial.println(DetectarObstaculo(delLeft));
 }
-void loopxd(){
+/*void loopxd(){
 
   while(!DetectarObstaculo(delForward)){
     while(DetectarObstaculo(delLeft)){
@@ -157,98 +163,23 @@ void loopxd(){
   
 
   }
-}
-void Evadir(float velocidad,int opcion){
-  /*
- Función Avanzar:
-   - velocidad: valor PWM (0 a 255)
-   - opcion:
-       0 -> ambos motores hacia adelante (avance)
-       1 -> giro a la derecha: motor derecho en reversa
-       2 -> giro a la izquierda: motor izquierdo hacia atras, motor derecho en reversa
-       3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
-  */
-    switch(opcion) {
-      case 0: // Avanzar recto
-         digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-      //DERECHA ADELANTE
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        break;
-      
-      case 1:
-       //motorIzquierdoAdelante
-       digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-      //motor derecho atras
-       digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-
-        break;
-      
-      case 2: 
-       //motor Izquierdo Atras
-        digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT,velocidad );
-      
-        //motor derecha adelante
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        
-        break;
-      
-      case 3: // Giro en el sitio (por ejemplo, giro a la derecha)
-      digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        break;
-      case 4: //rutina cuando vea la linea
-
-      Atras(140,500);
-      digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-      delay(300);
-
-
-
-     
-  }
-  delay(20);  // Pequeño retardo para estabilidad
-}
+}*/
 void loopMotores(){
-  //izquierda adelante-
+  //derechaa atras
        digitalWrite(MPos_Left, LOW);
         digitalWrite(MNeg_Left, HIGH);
         analogWrite(PWM_LEFT, velocidad);
         delay(2000);
 
         stop();
-      //DERECHA ADELANTE
+      //izquirda atras
         digitalWrite(MPos_Righ, HIGH);
         digitalWrite(MNeg_Righ, LOW);
         analogWrite(PWM_RIGH, velocidad);
         delay(2000);
 
         stop();
-  //IZQ ATRAS
+        //derecha adelante
         digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
@@ -256,7 +187,7 @@ void loopMotores(){
 
         stop();
       
-      //DERCHA ATRAS
+        //izquirda adelante
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
@@ -266,9 +197,8 @@ void loopMotores(){
         delay(5000);
 
 }
-
 //loopPrincipal
-void loop(){
+void loopMain(){
   uint16_t distancia = sensor.readRangeContinuousMillimeters();
   
   Serial.print(DetectarPiso(floorLeft));
@@ -336,51 +266,77 @@ void Avanzar(float velocidad, int opcion){
        1 -> giro a la izquierda: motor izquierdo en reversa, motor derecho hacia adelante
        2 -> giro a la derecha: motor izquierdo hacia adelante, motor derecho en reversa
        3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
+       4 -> rutina cuando vea la linea.
   */
-    switch(opcion) {
-      case 0:  //avance
-      //Izquierda adelante
-        digitalWrite(MPos_Left, LOW);
+
+      //derechaa atras
+       digitalWrite(MPos_Left, LOW);
         digitalWrite(MNeg_Left, HIGH);
         analogWrite(PWM_LEFT, velocidad);
-      //DERECHA ADELANTE
+        delay(2000);
+
+        stop();
+      //izquirda atras
         digitalWrite(MPos_Righ, HIGH);
         digitalWrite(MNeg_Righ, LOW);
+        analogWrite(PWM_RIGH, velocidad);
+        delay(2000);
+
+        stop();
+      //derecha adelante
+        digitalWrite(MPos_Left, HIGH);
+        digitalWrite(MNeg_Left, LOW);
+        analogWrite(PWM_LEFT, velocidad);
+        delay(2000);
+
+        stop();
+      
+      //izquirda adelante
+        digitalWrite(MPos_Righ, LOW);
+        digitalWrite(MNeg_Righ, HIGH);
+        analogWrite(PWM_RIGH, velocidad);
+        delay(2000);
+    switch(opcion) {
+      case 0:
+        //derecha adelante
+        digitalWrite(MPos_Left, HIGH);
+        digitalWrite(MNeg_Left, LOW);
+        analogWrite(PWM_LEFT, velocidad);
+        //izquirda adelante
+        digitalWrite(MPos_Righ, LOW);
+        digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
         break;
       
       case 1: // Giro a la izquierda
        
         //DERECHA ADELANTE
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-
-         //IZQ ATRAS
         digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
 
+         //IZQ ATRAS
+         digitalWrite(MPos_Righ, HIGH);
+         digitalWrite(MNeg_Righ, LOW);
+         analogWrite(PWM_RIGH, velocidad);
         break;
       
       case 2: // Giro a la derecha
-        //izquierda adelante-
-   //izquierda adelante-
-       digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);//LOW
-        analogWrite(PWM_LEFT, 20);
-      //derecha atras
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
+        //derecha atras
+         digitalWrite(MPos_Left, LOW);
+         digitalWrite(MNeg_Left, HIGH);
+         analogWrite(PWM_LEFT, velocidad);
         
         break;
       
       case 3: // Giro en el sitio (por ejemplo, giro a la derecha)
-      digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
+        digitalWrite(MPos_Left, LOW);
+        digitalWrite(MNeg_Left, HIGH);//LOW
+        analogWrite(PWM_LEFT, 20);
+          //derecha atras
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
@@ -389,7 +345,7 @@ void Avanzar(float velocidad, int opcion){
 
       Atras(140,1000);
 
-      digitalWrite(MPos_Left, HIGH);
+        digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
 
