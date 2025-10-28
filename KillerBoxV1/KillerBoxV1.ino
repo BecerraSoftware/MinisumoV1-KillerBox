@@ -98,8 +98,54 @@ bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
 int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
 bool Vl53x(int distancia){return distancia<200?true:false;}
-void loop(){
-  
+
+void loopProbarLineaBlanca(){
+  Avanzar(0,80);
+  if(DetectaBlanco(floorLeft)||DetectaBlanco(floorRigh)){
+    stop();
+    Avanzar(4,250);
+  }
+}
+void loopProbarMotores(){
+  Avanzar(0,50);
+  delay(2000);
+  stop();
+
+  Avanzar(1,50);
+  delay(2000);
+  stop();
+
+  Avanzar(2,50);
+  delay(2000);
+  stop();
+
+  Avanzar(3,50);
+  delay(2000);
+  stop();
+
+  Avanzar(4,50);
+  delay(2000);
+  stop();
+}
+
+
+
+
+
+
+
+
+void loopALLSENSOR(){
+  //Probar los floors
+  Serial.print(DetectarPiso(floorLeft));
+  Serial.print(" ");
+  Serial.print(DetectarPiso(floorRigh));
+  Serial.print(" ");
+  Serial.print(DetectarObstaculo(delLeft));
+  Serial.print(" ");
+  Serial.print(DetectarObstaculo(delRigh));
+  Serial.println(" ");
+
 }
 void loopnasnank(){
    /*
@@ -126,15 +172,6 @@ void loopnasnank(){
 
 
 }
-
-
-
-
-
-
-
-
-
 void loopSensor(){
    // Lee el valor más reciente sin bloquear el programa
   uint16_t distancia = sensor.readRangeContinuousMillimeters();
@@ -198,7 +235,8 @@ void loopMotores(){
 
 }
 //loopPrincipal
-void loopMain(){
+void loopMAIN(){
+  main:
   uint16_t distancia = sensor.readRangeContinuousMillimeters();
   
   Serial.print(DetectarPiso(floorLeft));
@@ -208,6 +246,7 @@ void loopMain(){
   if (Vl53x(distancia)) {
     Avanzar(100, 0);   // Opción 0: avanzar recto
     Serial.println("avanzar");
+    goto main;
   }
   // Si no, si el sensor izquierdo detecta, gira a la derecha (para buscar que el frontal se alinee)
   else if (DetectarObstaculo(delLeft)&& !Vl53x(distancia)) {
