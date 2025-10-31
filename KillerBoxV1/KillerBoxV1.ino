@@ -142,23 +142,7 @@ void loop() {
     return;
     }
 
-  // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
-  if (obstIzq && !obstDer) {
-  Serial.println("Oponente detectado por izquierda → girando hasta verlo con VL53X");
-  unsigned long startTime = millis();
-  while (millis() - startTime < 1000) { // evita que se quede trabado
-    Avanzar(80, 2);  // Gira a la izquierda
-    int distanciaTemp = sensor.readRangeContinuousMillimeters();
-    if (Vl53x(distanciaTemp)) {
-      Serial.println("VL53X lo detectó → atacar");
-      Avanzar(255, 0);
-      delay(50);
-      break;
-    }
-    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
-  }
-  stop();
-  return;
+
 }
 
   // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
