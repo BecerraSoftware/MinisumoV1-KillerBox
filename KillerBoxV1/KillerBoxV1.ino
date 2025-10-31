@@ -93,9 +93,68 @@ int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
 bool Vl53x(int distancia){return distancia<200?true:false;}
 //loopPrincipal LO MAS OPTIMIZADO POSIBLE Y RAPIDO PARA GANAR Y QUE SI TIENE EL DIPSWITCH ACTIVADO EL 1 CUANDO EL VL53X DETECTE E UN RANGO ESQUIVE EL ROBOT
-void loop(){
-SSSSSS
+void loop() {
+  static bool scanDirection = false;
+  static bool sidestepLeft = false;
+  static unsigned long lastScanFlip = 0;
+
+  int distancia = sensor.readRangeContinuousMillimeters();
+  bool timeout = sensor.timeoutOccurred();
+  bool frontClose = !timeout && Vl53x(distancia);
+
+  bool leftEdge = DetectaBlanco(floorLeft);
+  bool rightEdge = DetectaBlanco(floorRigh);
+  bool leftContact = digitalRead(delLeft) == HIGH;
+  bool rightContact = digitalRead(delRigh) == HIGH;
+
+  bool evadeMode = digitalRead(DipSwith1) == HIGH;
+  bool aggressiveMode = digitalRead(DipSwith2) == HIGH;
+
+  if (leftEdge && rightEdge) {
+    Atras(200, 250);
+    return;
   }
+  if (leftEdge) {
+    Avanzar(220, 2);
+    return;
+  }
+  if (rightEdge) {
+    Avanzar(220, 1);
+    return;
+  }
+
+  if (evadeMode && frontClose && !leftContact && !rightContact) {
+    sidestepLeft = !sidestepLeft;
+    Avanzar(230, sidestepLeft ? 1 : 2);
+    return;
+  }
+
+  if (leftContact && rightContact) {
+    Avanzar(255, 0);
+    return;
+  }
+  if (leftContact) {
+    Avanzar(240, 1);
+    return;
+  }
+  if (rightContact) {
+    Avanzar(240, 2);
+    return;
+  }
+
+  if (frontClose) {
+    Avanzar(255, 0);
+    return;
+  }
+
+  unsigned long now = millis();
+  if (now - lastScanFlip > 600) {
+    scanDirection = !scanDirection;
+    lastScanFlip = now;
+  }
+
+  Avanzar(aggressiveMode ? 220 : 200, scanDirection ? 1 : 2);
+}
   
 void Avanzar(float velocidad, int opcion){    
   /*
@@ -114,7 +173,8 @@ void Avanzar(float velocidad, int opcion){
         digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
-        //izquirda adelante
+
+        //izquierda adelante
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
@@ -127,16 +187,18 @@ void Avanzar(float velocidad, int opcion){
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
 
-         //IZQ ATRAS
+         //IZQUIERDA ATRAS
          digitalWrite(MPos_Righ, HIGH);
          digitalWrite(MNeg_Righ, LOW);
          analogWrite(PWM_RIGH, velocidad);
         break;
       
-      case 2: // Giro a la derecha
+      case 2: 
+        //izquierda adelante
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
+
         //derecha atras
          digitalWrite(MPos_Left, LOW);
          digitalWrite(MNeg_Left, HIGH);
@@ -144,26 +206,52 @@ void Avanzar(float velocidad, int opcion){
         
         break;
       
-      case 3: // Giro en el sitio (por ejemplo, giro a la derecha)
+      case 3:
+        //izquierda adelante
         digitalWrite(MPos_Left, LOW);
         digitalWrite(MNeg_Left, HIGH);//LOW
         analogWrite(PWM_LEFT, velocidad);
-          //derecha atras
+
+        //derecha atras
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
         analogWrite(PWM_RIGH, velocidad);
         break;
-      case 4: //rutina cuando vea la linea
+      case 4: {
+        Atras(220, 350);
+        stop();
+        delay(40);
 
-      Atras(80,500);
-      stop();
-      delay(10);
+        bool pivotLeft = (millis() & 0x01);
+        if (pivotLeft) {
+          // pivote hacia la izquierda
+          digitalWrite(MPos_Left, LOW);
+          digitalWrite(MNeg_Left, HIGH);
+          analogWrite(PWM_LEFT, 210);
+          digitalWrite(MPos_Righ, HIGH);
+          digitalWrite(MNeg_Righ, LOW);
+          analogWrite(PWM_RIGH, 230);
+        } else {
+          // pivote hacia la derecha
+          digitalWrite(MPos_Left, HIGH);
+          digitalWrite(MNeg_Left, LOW);
+          analogWrite(PWM_LEFT, 230);
+          digitalWrite(MPos_Righ, LOW);
+          digitalWrite(MNeg_Righ, HIGH);
+          analogWrite(PWM_RIGH, 210);
+        }
 
+        delay(260);
+
+        // reentrada agresiva hacia adelante
         digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
-      delay(250);     
-      stop();
+        digitalWrite(MPos_Righ, LOW);
+        digitalWrite(MNeg_Righ, HIGH);
+        analogWrite(PWM_RIGH, velocidad);
+        return;
+      }
   }
   delay(20);  // Pequeño retardo para estabilidad
 }
