@@ -94,7 +94,7 @@ bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
 bool Vl53x(int distancia){return distancia<200?true:false;}
 //loopPrincipal LO MAS OPTIMIZADO POSIBLE Y RAPIDO PARA GANAR Y QUE SI TIENE EL DIPSWITCH ACTIVADO EL 1 CUANDO EL VL53X DETECTE E UN RANGO ESQUIVE EL ROBOT
 void loop(){
-
+SSSSSS
   }
   
 void Avanzar(float velocidad, int opcion){    
