@@ -73,6 +73,7 @@ void setup() {
   pinMode(MPos_Left,OUTPUT);
   pinMode(MNeg_Left,OUTPUT);
   pinMode(PWM_LEFT,OUTPUT);
+  pinMode(4,INPUT);
   
   stop();
 
@@ -81,80 +82,117 @@ void setup() {
   pinMode(DipSwith2,INPUT);
   
   Serial.begin(9600); // Monitor serial
-
-
-
-  
-  delay(2000);//quitar esto si es necesario
 }
 
 bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
 int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
-bool Vl53x(int distancia){return distancia<200?true:false;}
-//loopPrincipal LO MAS OPTIMIZADO POSIBLE Y RAPIDO PARA GANAR Y QUE SI TIENE EL DIPSWITCH ACTIVADO EL 1 CUANDO EL VL53X DETECTE E UN RANGO ESQUIVE EL ROBOT
+bool Vl53x(int distancia){return distancia<500?true:false;}
+const int DISTANCIA_MAX= 200;
+
 void loop() {
-  static bool scanDirection = false;
-  static bool sidestepLeft = false;
-  static unsigned long lastScanFlip = 0;
+  if (digitalRead(4) == 1) {
+     // Botón de inicio
+    int distancia = sensor.readRangeContinuousMillimeters();
+    bool pisoIzq = DetectaBlanco(floorLeft);
+    bool pisoDer = DetectaBlanco(floorRigh);
+    bool obstIzq = DetectarObstaculo(delLeft);
+    bool obstDer = DetectarObstaculo(delRigh);
 
-  int distancia = sensor.readRangeContinuousMillimeters();
-  bool timeout = sensor.timeoutOccurred();
-  bool frontClose = !timeout && Vl53x(distancia);
+  /* 🔹 1. EVITAR SALIR DEL DOYO
+    if (pisoIzq && pisoDer) {
+      Serial.println("¡Borde detectado! Retrocede y gira aleatoriamente");
+      Atras(220, 300);
+      (random(0, 2) == 0) ? Avanzar(200, 1) : Avanzar(200, 2);
+      delay(300);
+      stop();
+      return;
+    }
+    else if (pisoIzq) {
+      Serial.println("Borde izquierdo detectado → retrocede y gira derecha");
+      Atras(220, 250);
+      Avanzar(200, 2);
+      delay(300);
+      stop();
+      return;
+    }
+    else if (pisoDer) {
+      Serial.println("Borde derecho detectado → retrocede y gira izquierda");
+      Atras(220, 250);
+      Avanzar(200, 1);
+      delay(300);
+      stop();
+      return;
+    }*/
 
-  bool leftEdge = DetectaBlanco(floorLeft);
-  bool rightEdge = DetectaBlanco(floorRigh);
-  bool leftContact = digitalRead(delLeft) == HIGH;
-  bool rightContact = digitalRead(delRigh) == HIGH;
-
-  bool evadeMode = digitalRead(DipSwith1) == HIGH;
-  bool aggressiveMode = digitalRead(DipSwith2) == HIGH;
-
-  if (leftEdge && rightEdge) {
-    Atras(200, 250);
-    return;
-  }
-  if (leftEdge) {
-    Avanzar(220, 2);
-    return;
-  }
-  if (rightEdge) {
-    Avanzar(220, 1);
-    return;
-  }
-
-  if (evadeMode && frontClose && !leftContact && !rightContact) {
-    sidestepLeft = !sidestepLeft;
-    Avanzar(230, sidestepLeft ? 1 : 2);
-    return;
-  }
-
-  if (leftContact && rightContact) {
+  // 🔹 2. LÓGICA DE PERSECUCIÓN Y ATAQUE
+  if (Vl53x(distancia)) {
+    // Si ya ve al enemigo con el VL53X, avanza directo
+    Serial.println("VL53X detecta al enemigo → ataque directo");
     Avanzar(255, 0);
+    delay(30);
     return;
-  }
-  if (leftContact) {
-    Avanzar(240, 1);
-    return;
-  }
-  if (rightContact) {
-    Avanzar(240, 2);
-    return;
-  }
+    }
 
-  if (frontClose) {
-    Avanzar(255, 0);
+  // Si detecta ambos sensores frontales → enemigo al frente
+  if (obstIzq && obstDer) {
+    Serial.println("Enemigo al frente (ambos sensores) → avanzar directo");
+    //Avanzar(230, 0);
+    delay(30);
     return;
-  }
+    }
 
-  unsigned long now = millis();
-  if (now - lastScanFlip > 600) {
-    scanDirection = !scanDirection;
-    lastScanFlip = now;
+  // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
+  if (obstIzq && !obstDer) {
+  Serial.println("Oponente detectado por izquierda → girando hasta verlo con VL53X");
+  unsigned long startTime = millis();
+  while (millis() - startTime < 1000) { // evita que se quede trabado
+    Avanzar(80, 2);  // Gira a la izquierda
+    int distanciaTemp = sensor.readRangeContinuousMillimeters();
+    if (Vl53x(distanciaTemp)) {
+      Serial.println("VL53X lo detectó → atacar");
+      Avanzar(255, 0);
+      delay(50);
+      break;
+    }
+    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
   }
-
-  Avanzar(aggressiveMode ? 220 : 200, scanDirection ? 1 : 2);
+  stop();
+  return;
 }
+
+  // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
+  if (obstDer && !obstIzq) {
+    Serial.println("Oponente detectado por derecha → girando hasta verlo con VL53X");
+    unsigned long startTime = millis();
+    while (millis() - startTime < 1000) {
+      Avanzar(80, 1);  // Gira a la derecha
+      int distanciaTemp = sensor.readRangeContinuousMillimeters();
+      if (Vl53x(distanciaTemp)) {
+        Serial.println("VL53X lo detectó → atacar");
+        Avanzar(255, 0);
+        delay(50);
+        break;
+    }
+    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
+  }
+  stop();
+  return;
+}
+
+// 🔹 3. Si no detecta nada → buscar
+Serial.println("Buscando enemigo...");
+Avanzar(50, 0);
+delay(80);
+
+}
+else{
+  stop();
+}
+}
+
+
+
   
 void Avanzar(float velocidad, int opcion){    
   /*
@@ -221,43 +259,19 @@ void Avanzar(float velocidad, int opcion){
         Atras(220, 350);
         stop();
         delay(40);
-
-        bool pivotLeft = (millis() & 0x01);
-        if (pivotLeft) {
-          // pivote hacia la izquierda
-          digitalWrite(MPos_Left, LOW);
-          digitalWrite(MNeg_Left, HIGH);
-          analogWrite(PWM_LEFT, 210);
-          digitalWrite(MPos_Righ, HIGH);
-          digitalWrite(MNeg_Righ, LOW);
-          analogWrite(PWM_RIGH, 230);
-        } else {
-          // pivote hacia la derecha
-          digitalWrite(MPos_Left, HIGH);
-          digitalWrite(MNeg_Left, LOW);
-          analogWrite(PWM_LEFT, 230);
-          digitalWrite(MPos_Righ, LOW);
-          digitalWrite(MNeg_Righ, HIGH);
-          analogWrite(PWM_RIGH, 210);
-        }
-
-        delay(260);
-
-        // reentrada agresiva hacia adelante
-        digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
+        digitalWrite(MPos_Left, LOW);
+        digitalWrite(MNeg_Left, HIGH);//LOW
         analogWrite(PWM_LEFT, velocidad);
+
+        //derecha atras
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
+        analogWrite(PWM_RIGH, velocidad);  
         return;
       }
   }
   delay(20);  // Pequeño retardo para estabilidad
 }
-
-  
-  
 void Atras(float velocidad,int tiempo){
               digitalWrite(MPos_Left, LOW);
         digitalWrite(MNeg_Left, HIGH);
