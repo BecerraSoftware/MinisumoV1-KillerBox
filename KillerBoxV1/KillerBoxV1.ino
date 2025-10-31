@@ -31,11 +31,6 @@ VL53L0X sensor;
 const int DipSwith1 =2;
 const int DipSwith2 =3;
 
-//BANDERA
-//#define pinServo A4
-
-//Servo bandera;   // crea el objeto para el servo
-
 /*
 Variables del sistema del robot
 BLANCO==> Del sensor de piso que tan intennso detecta el blanco para determinar que movimiento
@@ -44,7 +39,6 @@ se efectua
 
 //sensores de piso
 #define BLANCO 400
-const int velocidad=255;
 
 
 void setup() {
@@ -98,204 +92,11 @@ bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
 int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
 bool Vl53x(int distancia){return distancia<200?true:false;}
+//loopPrincipal LO MAS OPTIMIZADO POSIBLE Y RAPIDO PARA GANAR Y QUE SI TIENE EL DIPSWITCH ACTIVADO EL 1 CUANDO EL VL53X DETECTE E UN RANGO ESQUIVE EL ROBOT
+void loop(){
 
-void loopProbarLineaBlanca(){
-  Avanzar(0,80);
-  if(DetectaBlanco(floorLeft)||DetectaBlanco(floorRigh)){
-    stop();
-    Avanzar(4,250);
-  }
-}
-void loopProbarMotores(){
-  Avanzar(0,50);
-  delay(2000);
-  stop();
-
-  Avanzar(1,50);
-  delay(2000);
-  stop();
-
-  Avanzar(2,50);
-  delay(2000);
-  stop();
-
-  Avanzar(3,50);
-  delay(2000);
-  stop();
-
-  Avanzar(4,50);
-  delay(2000);
-  stop();
-}
-
-
-
-
-
-
-
-
-void loopALLSENSOR(){
-  //Probar los floors
-  Serial.print(DetectarPiso(floorLeft));
-  Serial.print(" ");
-  Serial.print(DetectarPiso(floorRigh));
-  Serial.print(" ");
-  Serial.print(DetectarObstaculo(delLeft));
-  Serial.print(" ");
-  Serial.print(DetectarObstaculo(delRigh));
-  Serial.println(" ");
-
-}
-void loopnasnank(){
-   /*
-    Función Avanzar:
-    - velocidad: valor PWM (0 a 255)
-    - opcion:
-       0 -> ambos motores hacia adelante (avance)
-       1 -> giro a la izquierda: motor izquierdo en reversa, motor derecho hacia adelante
-       2 -> giro a la derecha: motor izquierdo hacia adelante, motor derecho en reversa
-       3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
-       4 -> rutina cuando vea la linea.
-       */
-  uint16_t distancia = sensor.readRangeContinuousMillimeters();
-
-  Serial.println(distancia);
-  if(Vl53x(distancia)){
-    Avanzar(250,0);
-  }else{
-    stop();
-    Avanzar(50,3);
-  }
-
-
-
-
-}
-void loopSensor(){
-   // Lee el valor más reciente sin bloquear el programa
-  uint16_t distancia = sensor.readRangeContinuousMillimeters();
-
-  Serial.print("Distancia: ");
-  Serial.print(distancia);
-  Serial.print(" mm");
-  Serial.print("  ");
-  Serial.print(DetectarObstaculo(delRigh));
-  Serial.print("  ");
-  Serial.println(DetectarObstaculo(delLeft));
-}
-/*void loopxd(){
-
-  while(!DetectarObstaculo(delForward)){
-    while(DetectarObstaculo(delLeft)){
-      Evadir(100,2);
-      if(!DetectarObstaculo(delLeft)){break;}
-    }
-    while(DetectarObstaculo(delRigh)){
-      Evadir(100,1);
-      if(!DetectarObstaculo(delRigh)){break;}
-  }
-  stop();
-    
-  
-
-  }
-}*/
-void loopMotores(){
-  //derechaa atras
-       digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT, velocidad);
-        delay(2000);
-
-        stop();
-      //izquirda atras
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(2000);
-
-        stop();
-        //derecha adelante
-        digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-        delay(2000);
-
-        stop();
-      
-        //izquirda adelante
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(2000);
-
-        stop();
-        delay(5000);
-
-}
-//loopPrincipal
-void loopMAIN(){
-  main:
-  uint16_t distancia = sensor.readRangeContinuousMillimeters();
-  
-  Serial.print(DetectarPiso(floorLeft));
-  Serial.print(" ");
-  Serial.print(DetectarPiso(floorRigh));
-  Serial.println(" ");
-  if (Vl53x(distancia)) {
-    Avanzar(100, 0);   // Opción 0: avanzar recto
-    Serial.println("avanzar");
-    goto main;
-  }
-  // Si no, si el sensor izquierdo detecta, gira a la derecha (para buscar que el frontal se alinee)
-  else if (DetectarObstaculo(delLeft)&& !Vl53x(distancia)) {
-    Avanzar(50, 2);   // Opción 2: giro a la derecha
-    Serial.println("activar izquierda");
-  }
-  // Si no, si el sensor derecho detecta, gira a la izquierda
-  else if (DetectarObstaculo(delRigh)&&!Vl53x(distancia)) {
-    Avanzar(50, 1);   // Opción 1: giro a la izquierda
-    Serial.println("giro derecha");
-  }
-  else if(DetectarObstaculo(delLeft)&&Vl53x(distancia)||DetectarObstaculo(delRigh)&&Vl53x(distancia)){
-     Avanzar(50, 0);   // Opción 0: avanzar recto
-    Serial.println("avanzar");
-  }
-  else if(DetectaBlanco(floorRigh) || DetectaBlanco(floorLeft)) {
-     Avanzar(50,4);
-     Serial.println("ver atras");
-
-  }
-  else {
-    Avanzar(50, 3);   // Opción 3: giro en el sitio
-    Serial.println("girar sitio");}
-
-    
-  delay(10);
   }
   
-  
-void Atras(float velocidad,int tiempo){
-              digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);      
-      //DERCHA ATRAS
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(tiempo);
-        stop();
-}
-void stop(){
-  digitalWrite(MPos_Left,LOW);
-  digitalWrite(MNeg_Left,LOW);
-  analogWrite(PWM_LEFT,0);
-
-  digitalWrite(MPos_Righ,LOW);
-  digitalWrite(MPos_Righ,LOW);
-  analogWrite(PWM_RIGH,0);
-}
 void Avanzar(float velocidad, int opcion){    
   /*
  Función Avanzar:
@@ -307,34 +108,6 @@ void Avanzar(float velocidad, int opcion){
        3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
        4 -> rutina cuando vea la linea.
   */
-
-      //derechaa atras
-       digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT, velocidad);
-        delay(2000);
-
-        stop();
-      //izquirda atras
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(2000);
-
-        stop();
-      //derecha adelante
-        digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-        delay(2000);
-
-        stop();
-      
-      //izquirda adelante
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(2000);
     switch(opcion) {
       case 0:
         //derecha adelante
@@ -374,7 +147,7 @@ void Avanzar(float velocidad, int opcion){
       case 3: // Giro en el sitio (por ejemplo, giro a la derecha)
         digitalWrite(MPos_Left, LOW);
         digitalWrite(MNeg_Left, HIGH);//LOW
-        analogWrite(PWM_LEFT, 20);
+        analogWrite(PWM_LEFT, velocidad);
           //derecha atras
         digitalWrite(MPos_Righ, LOW);
         digitalWrite(MNeg_Righ, HIGH);
@@ -382,20 +155,55 @@ void Avanzar(float velocidad, int opcion){
         break;
       case 4: //rutina cuando vea la linea
 
-      Atras(140,1000);
+      Atras(80,500);
+      stop();
+      delay(10);
 
         digitalWrite(MPos_Left, HIGH);
         digitalWrite(MNeg_Left, LOW);
         analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-      delay(1000);
-
-
-
-     
+      delay(250);     
+      stop();
   }
   delay(20);  // Pequeño retardo para estabilidad
 }
+
+  
+  
+void Atras(float velocidad,int tiempo){
+              digitalWrite(MPos_Left, LOW);
+        digitalWrite(MNeg_Left, HIGH);
+        analogWrite(PWM_LEFT, velocidad);      
+      //DERCHA ATRAS
+        digitalWrite(MPos_Righ, HIGH);
+        digitalWrite(MNeg_Righ, LOW);
+        analogWrite(PWM_RIGH, velocidad);
+        delay(tiempo);
+        stop();
+}
+void stop(){
+  digitalWrite(MPos_Left,LOW);
+  digitalWrite(MNeg_Left,LOW);
+  analogWrite(PWM_LEFT,0);
+
+  digitalWrite(MPos_Righ,LOW);
+  digitalWrite(MPos_Righ,LOW);
+  analogWrite(PWM_RIGH,0);
+}
+/*void loopxd(){
+
+  while(!DetectarObstaculo(delForward)){
+    while(DetectarObstaculo(delLeft)){
+      Evadir(100,2);
+      if(!DetectarObstaculo(delLeft)){break;}
+    }
+    while(DetectarObstaculo(delRigh)){
+      Evadir(100,1);
+      if(!DetectarObstaculo(delRigh)){break;}
+  }
+  stop();
+    
+  
+
+  }
+}*/
