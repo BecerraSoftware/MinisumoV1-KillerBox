@@ -124,7 +124,7 @@ void loop() {
       stop();
       return;
     }*/
-
+/*
     // 🔹 2. LÓGICA DE PERSECUCIÓN Y ATAQUE
     if (Vl53x(distancia)) {
       // Si ya ve al enemigo con el VL53X, avanza directo
@@ -137,29 +137,29 @@ void loop() {
     // Si detecta ambos sensores frontales → enemigo al frente
     if (obstIzq && obstDer) {
       Serial.println("Enemigo al frente (ambos sensores) → avanzar directo");
-      //Avanzar(230, 0);
+      Avanzar(230, 0);
       delay(30);
       return;
       }
 
     // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
     if (obstIzq && !obstDer) {
-    Serial.println("Oponente detectado por izquierda → girando hasta verlo con VL53X");
-    unsigned long startTime = millis();
-    while (millis() - startTime < 1000) { // evita que se quede trabado
-      Avanzar(80, 2);  // Gira a la izquierda
-      int distanciaTemp = sensor.readRangeContinuousMillimeters();
-      if (Vl53x(distanciaTemp)) {
-        Serial.println("VL53X lo detectó → atacar");
-        Avanzar(255, 0);
-        delay(50);
-        break;
+      Serial.println("Oponente detectado por izquierda → girando hasta verlo con VL53X");
+      unsigned long startTime = millis();
+      while (millis() - startTime < 1000) { // evita que se quede trabado
+        Avanzar(80, 2);  // Gira a la izquierda
+        int distanciaTemp = sensor.readRangeContinuousMillimeters();
+        if (Vl53x(distanciaTemp)) {
+          Serial.println("VL53X lo detectó → atacar");
+          Avanzar(255, 0);
+          delay(50);
+          break;
+        }
+        if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
       }
-    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
-  }
-    stop();
-    return;
-      }
+      stop();
+      return;
+    }
 
   // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
     if (obstDer && !obstIzq) {
@@ -174,20 +174,21 @@ void loop() {
           delay(50);
           break;
         }
-    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
-  }
-    stop();
-    return;
-}
+        if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
+      }
+      stop();
+      return;
+  } 
 
   // 🔹 3. Si no detecta nada → buscar
   Serial.println("Buscando enemigo...");
   Avanzar(50, 0);
-  delay(80);
+  delay(80);*/
   }
   else{
   stop();
-}
+  delay(30);
+  }
 }
 
 
