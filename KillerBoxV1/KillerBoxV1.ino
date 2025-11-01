@@ -99,7 +99,7 @@ void loop() {
     bool obstIzq = DetectarObstaculo(delLeft);
     bool obstDer = DetectarObstaculo(delRigh);
 
-  /* 🔹 1. EVITAR SALIR DEL DOYO
+    /* 🔹 1. EVITAR SALIR DEL DOYO
     if (pisoIzq && pisoDer) {
       Serial.println("¡Borde detectado! Retrocede y gira aleatoriamente");
       Atras(220, 300);
@@ -125,68 +125,67 @@ void loop() {
       return;
     }*/
 
-  // 🔹 2. LÓGICA DE PERSECUCIÓN Y ATAQUE
-  if (Vl53x(distancia)) {
-    // Si ya ve al enemigo con el VL53X, avanza directo
-    Serial.println("VL53X detecta al enemigo → ataque directo");
-    Avanzar(255, 0);
-    delay(30);
-    return;
-    }
-
-  // Si detecta ambos sensores frontales → enemigo al frente
-  if (obstIzq && obstDer) {
-    Serial.println("Enemigo al frente (ambos sensores) → avanzar directo");
-    //Avanzar(230, 0);
-    delay(30);
-    return;
-    }
-
-  // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
-  if (obstIzq && !obstDer) {
-  Serial.println("Oponente detectado por izquierda → girando hasta verlo con VL53X");
-  unsigned long startTime = millis();
-  while (millis() - startTime < 1000) { // evita que se quede trabado
-    Avanzar(80, 2);  // Gira a la izquierda
-    int distanciaTemp = sensor.readRangeContinuousMillimeters();
-    if (Vl53x(distanciaTemp)) {
-      Serial.println("VL53X lo detectó → atacar");
+    // 🔹 2. LÓGICA DE PERSECUCIÓN Y ATAQUE
+    if (Vl53x(distancia)) {
+      // Si ya ve al enemigo con el VL53X, avanza directo
+      Serial.println("VL53X detecta al enemigo → ataque directo");
       Avanzar(255, 0);
-      delay(50);
-      break;
-    }
-    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
-  }
-  stop();
-  return;
-}
+      delay(30);
+      return;
+      }
 
-  // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
-  if (obstDer && !obstIzq) {
-    Serial.println("Oponente detectado por derecha → girando hasta verlo con VL53X");
+    // Si detecta ambos sensores frontales → enemigo al frente
+    if (obstIzq && obstDer) {
+      Serial.println("Enemigo al frente (ambos sensores) → avanzar directo");
+      //Avanzar(230, 0);
+      delay(30);
+      return;
+      }
+
+    // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
+    if (obstIzq && !obstDer) {
+    Serial.println("Oponente detectado por izquierda → girando hasta verlo con VL53X");
     unsigned long startTime = millis();
-    while (millis() - startTime < 1000) {
-      Avanzar(80, 1);  // Gira a la derecha
+    while (millis() - startTime < 1000) { // evita que se quede trabado
+      Avanzar(80, 2);  // Gira a la izquierda
       int distanciaTemp = sensor.readRangeContinuousMillimeters();
       if (Vl53x(distanciaTemp)) {
         Serial.println("VL53X lo detectó → atacar");
         Avanzar(255, 0);
         delay(50);
         break;
-    }
+      }
+    if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
+  }
+    stop();
+    return;
+      }
+
+  // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
+    if (obstDer && !obstIzq) {
+      Serial.println("Oponente detectado por derecha → girando hasta verlo con VL53X");
+      unsigned long startTime = millis();
+      while (millis() - startTime < 1000) {
+        Avanzar(80, 1);  // Gira a la derecha
+        int distanciaTemp = sensor.readRangeContinuousMillimeters();
+        if (Vl53x(distanciaTemp)) {
+          Serial.println("VL53X lo detectó → atacar");
+          Avanzar(255, 0);
+          delay(50);
+          break;
+        }
     if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
   }
-  stop();
-  return;
+    stop();
+    return;
 }
 
-// 🔹 3. Si no detecta nada → buscar
-Serial.println("Buscando enemigo...");
-Avanzar(50, 0);
-delay(80);
-
-}
-else{
+  // 🔹 3. Si no detecta nada → buscar
+  Serial.println("Buscando enemigo...");
+  Avanzar(50, 0);
+  delay(80);
+  }
+  else{
   stop();
 }
 }
