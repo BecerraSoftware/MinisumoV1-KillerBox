@@ -137,7 +137,7 @@ void loop() {
   // Si detecta ambos sensores frontales → enemigo al frente
   if (obstIzq && obstDer) {
     Serial.println("Enemigo al frente (ambos sensores) → avanzar directo");
-    //Avanzar(230, 0);
+    Avanzar(230, 0);
     delay(30);
     return;
     }
@@ -160,7 +160,6 @@ void loop() {
   stop();
   return;
 }
-
   // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
   if (obstDer && !obstIzq) {
     Serial.println("Oponente detectado por derecha → girando hasta verlo con VL53X");
@@ -190,6 +189,8 @@ else{
   stop();
 }
 }
+
+
 
 
 
