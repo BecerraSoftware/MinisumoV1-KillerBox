@@ -5,25 +5,8 @@ Robot capaz de detectar obstáculos y reaccionar de acuerdo a la situación
 con Sensores de piso para detectar el borde de la arena
 y estrategias para empujar al oponente fuera del ring
 
-creado por: Victor Becerra--- github: BecerraSoftware
+Victor Becerra--- github: BecerraSoftware
 */
-
-/*
-PINES QUE NO ESTAN FUNCANDO
-A4, A6, A7
-
-PINES EN USO
-S1=>A0
-S2=>A1
-S3=>A2
-S4=>A3
-S8=>A7
-*/
-
-//Cuenta con 3 Sensores al frente para detectar 3 posiciones distintas
-#define delLeft A2
-#define delRigh A5
-#define delForward A3  //A4
 
 // Ultrasonico frontal (HC-SR04)
 // Cambia los pines si necesitas usar otros disponibles en tu placa
@@ -39,7 +22,7 @@ S8=>A7
 #define DEBUG 1
 
 //Cuenta con 2 Sensores a los costados para detectar si esta de lado o una orientacion
-#define sensorRigh A6 //NOSE
+#define sensorRigh A6
 #define sensorLeft A1
 
 
