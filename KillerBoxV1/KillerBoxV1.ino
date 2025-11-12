@@ -1,432 +1,238 @@
-  
-/*
-Código para el robot mini sumo-- KILLERBOX
-Robot capaz de detectar obstáculos y reaccionar de acuerdo a la situación
-con Sensores de piso para detectar el borde de la arena
-y estrategias para empujar al oponente fuera del ring
-
-Victor Becerra--- github: BecerraSoftware
+  /*
+  Robot Mini Sumo: KILLERBOX (Versión Los legendarios Ultrasonidos💘)
+  Autor: Victor Becerra (github: BecerraSoftware)
 */
 
-// Ultrasonico frontal (HC-SR04)
-// Cambia los pines si necesitas usar otros disponibles en tu placa
-#define US_TRIG_PIN 12
-#define US_ECHO_PIN 13
-// Umbral (cm) para considerar que hay un obstáculo
-#define US_OBSTACLE_THRESHOLD_CM 30
-// Timeout en microsegundos para pulseIn
-#define US_TIMEOUT_US 30000
-// Número de muestras para promediar la lectura ultrasónica
-#define US_SAMPLES 5
-// Habilitar prints de depuración (0 desactiva)
 #define DEBUG 1
 
-//Cuenta con 2 Sensores a los costados para detectar si esta de lado o una orientacion
-#define sensorRigh A6
-#define sensorLeft A1
+// Sensores ultrasónicos (HC-SR04)
+#define US_FRONT_TRIG 12
+#define US_FRONT_ECHO 13
 
+#define US_LEFT_TRIG 4
+#define US_LEFT_ECHO 3
 
-//Cuenta con dos sensores de piso que detectan el color blanco para no salir del ring
+#define US_RIGHT_TRIG 2
+#define US_RIGHT_ECHO 11
+
+#define US_THRESHOLD_CM 30
+#define US_TIMEOUT_US 30000
+#define US_SAMPLES 3
+
+// Sensores de piso
 #define floorLeft A7
-#define floorRigh A0
+#define floorRight A0
+#define BLANCO 400
 
-//Pines de motores
+// Motores
 #define MPos_Left 9
 #define MNeg_Left 8
 #define PWM_LEFT 10
 
-#define MPos_Righ 6
-#define MNeg_Righ 7
-#define PWM_RIGH 5
+#define MPos_Right 6
+#define MNeg_Right 7
+#define PWM_RIGHT 5
 
-//variables de dipswich
-const int DipSwith1 =2;
-const int DipSwith2 =3;
+// Velocidades
+#define VEL_MAX 255
+#define VEL_GIRO 150
+#define VEL_RECUA 180
 
-//BANDERA
-//#define pinServo A4
+// Dipswitches
+#define DipSwitch1 A2
+#define DipSwitch2 A3
 
-//Servo bandera;   // crea el objeto para el servo
-
-/*
-Variables del sistema del robot
-BLANCO==> Del sensor de piso que tan intennso detecta el blanco para determinar que movimiento
-se efectua
-*/
-
-//sensores de piso
-#define BLANCO 400
-const int velocidad=255;
-
+// ====================== SETUP ======================
 void setup() {
-  //SENSORES
-  pinMode(delForward,INPUT);
-  pinMode(delRigh,INPUT);
-  pinMode(delLeft,INPUT);
-  pinMode(sensorRigh,INPUT);
-  pinMode(sensorLeft,INPUT);
+  Serial.begin(9600);
 
+  // Pines ultrasónicos
+  pinMode(US_FRONT_TRIG, OUTPUT);
+  pinMode(US_FRONT_ECHO, INPUT);
 
-  // Ultrasonico frontal
-  pinMode(US_TRIG_PIN, OUTPUT);
-  pinMode(US_ECHO_PIN, INPUT);
+  pinMode(US_LEFT_TRIG, OUTPUT);
+  pinMode(US_LEFT_ECHO, INPUT);
 
+  pinMode(US_RIGHT_TRIG, OUTPUT);
+  pinMode(US_RIGHT_ECHO, INPUT);
 
-  //Sensores de piso
-  pinMode(floorRigh,INPUT);
-  pinMode(floorLeft,INPUT);
+  // Sensores de piso
+  pinMode(floorLeft, INPUT);
+  pinMode(floorRight, INPUT);
 
-  //MOTORES
-  pinMode(MPos_Righ, OUTPUT);
-  pinMode(MNeg_Righ, OUTPUT);
-  pinMode(PWM_RIGH, OUTPUT);
+  // Motores
+  pinMode(MPos_Left, OUTPUT);
+  pinMode(MNeg_Left, OUTPUT);
+  pinMode(PWM_LEFT, OUTPUT);
 
-  pinMode(MPos_Left,OUTPUT);
-  pinMode(MNeg_Left,OUTPUT);
-  pinMode(PWM_LEFT,OUTPUT);
+  pinMode(MPos_Right, OUTPUT);
+  pinMode(MNeg_Right, OUTPUT);
+  pinMode(PWM_RIGHT, OUTPUT);
 
-  //dipswith
-  pinMode(DipSwith1,INPUT);
-  pinMode(DipSwith2,INPUT);
-
-
-  //leds de prueba
-  pinMode(11,OUTPUT);
-
-
-
-  Serial.begin(9600); // Monitor serial
-  delay(200);//quitar esto si es necesario
-
-  //Avanzar hasta que detecte la linea despues gira y ataca 
-  if(ButonPush(DipSwith1)&&!ButonPush(DipSwith2)){ 
-    while(!DetectaBlanco(floorRigh) || !DetectaBlanco(floorLeft)){
-    Avanzar(120,0);
-  }
-  Avanzar(200,4);
-  }
+  pinMode(DipSwitch1, INPUT);
+  pinMode(DipSwitch2, INPUT);
   stop();
-  delay(5);
+  Serial.println("KILLERBOX listo!");
+  delay(500); //Aqui cambiar para lo del SECIHTI 
+  
+  
 }
 
-bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
-int DetectarPiso(int pin){return analogRead(pin);}
-bool DetectarObstaculo(int pin){return digitalRead(pin)==HIGH;}
-int LeerSensor(int pin){return digitalRead(pin);}
-bool ButonPush(int buton){return digitalRead(buton)==1;}
+// ====================== FUNCIONES DE SENSORES ======================
 
-// Lee distancia en cm usando HC-SR04 (devuelve -1 si timeout/no lectura)
-long readUltrasonicCM(int trigPin, int echoPin){
-  // Garantizar trig en LOW antes del pulso
+// Lectura ultrasónica individual
+long readUltrasonicCM(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
-  // Pulso de 10us
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
   unsigned long duration = pulseIn(echoPin, HIGH, US_TIMEOUT_US);
-  if(duration == 0) return -1; // timeout
-  // Convertir microsegundos a cm: distancia = (tiempo/2) / 29.1  ~ tiempo/58
-  long distanceCm = duration / 58;
-  return distanceCm;
+  if (duration == 0) return -1;
+  return duration / 58;
 }
 
-// Promedia US_SAMPLES lecturas y devuelve el promedio en cm o -1 si no hay lecturas válidas
-long readUltrasonicAvg(int trigPin, int echoPin, int samples){
-  long sum = 0;
-  int count = 0;
-  for(int i=0;i<samples;i++){
+// Promedio de lecturas
+long readUltrasonicAvg(int trigPin, int echoPin, int samples = US_SAMPLES) {
+  long sum = 0; int valid = 0;
+  for (int i = 0; i < samples; i++) {
     long d = readUltrasonicCM(trigPin, echoPin);
-    if(d > 0){
-      sum += d;
-      count++;
+    if (d > 0) { sum += d; valid++; }
+    delay(5);
+  }
+  return (valid == 0) ? -1 : sum / valid;
+}
+
+bool DetectaBlanco(int pin) { return analogRead(pin) < BLANCO; }
+bool ButonPush(int pin) { return digitalRead(pin) == HIGH; }
+
+// ====================== FUNCIONES DE MOVIMIENTO ======================
+
+void stop() {
+  digitalWrite(MPos_Left, LOW);
+  digitalWrite(MNeg_Left, LOW);
+  analogWrite(PWM_LEFT, 0);
+  digitalWrite(MPos_Right, LOW);
+  digitalWrite(MNeg_Right, LOW);
+  analogWrite(PWM_RIGHT, 0);
+}
+
+void Avanzar(int vel) {
+  digitalWrite(MPos_Left, LOW);
+  digitalWrite(MNeg_Left, HIGH);
+  analogWrite(PWM_LEFT, vel);
+  digitalWrite(MPos_Right, LOW);
+  digitalWrite(MNeg_Right, HIGH);
+  analogWrite(PWM_RIGHT, vel);
+}
+
+void Atras(int vel) {
+  digitalWrite(MPos_Left, HIGH);
+  digitalWrite(MNeg_Left, LOW);
+  analogWrite(PWM_LEFT, vel);
+  digitalWrite(MPos_Right, HIGH);
+  digitalWrite(MNeg_Right, LOW);
+  analogWrite(PWM_RIGHT, vel);
+}
+
+void GirarDerecha(int vel) {
+  digitalWrite(MPos_Left, LOW);
+  digitalWrite(MNeg_Left, HIGH);
+  analogWrite(PWM_LEFT, vel);
+  digitalWrite(MPos_Right, HIGH);
+  digitalWrite(MNeg_Right, LOW);
+  analogWrite(PWM_RIGHT, vel);
+}
+
+void GirarIzquierda(int vel) {
+  digitalWrite(MPos_Left, HIGH);
+  digitalWrite(MNeg_Left, LOW);
+  analogWrite(PWM_LEFT, vel);
+  digitalWrite(MPos_Right, LOW);
+  digitalWrite(MNeg_Right, HIGH);
+  analogWrite(PWM_RIGHT, vel);
+}
+
+// ====================== LÓGICA PRINCIPAL ======================
+
+
+void loop() {
+  long front = readUltrasonicAvg(US_FRONT_TRIG, US_FRONT_ECHO);
+  long left = readUltrasonicAvg(US_LEFT_TRIG, US_LEFT_ECHO);
+  long right = readUltrasonicAvg(US_RIGHT_TRIG, US_RIGHT_ECHO);
+
+  if (DEBUG) {
+    Serial.print("F:"); Serial.print(front);
+    Serial.print(" L:"); Serial.print(left);
+    Serial.print(" R:"); Serial.println(right);
+  }
+
+  // Seguridad de línea blanca (bordes)
+if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRight)) {
+  unsigned long startTime = millis();
+  unsigned long phase = 0; // 0 = retroceso, 1 = giro
+
+  while (true) {
+    // Leer sensores ultrasónicos durante la maniobra
+    long front = readUltrasonicAvg(US_FRONT_TRIG, US_FRONT_ECHO);
+    long left  = readUltrasonicAvg(US_LEFT_TRIG, US_LEFT_ECHO);
+    long right = readUltrasonicAvg(US_RIGHT_TRIG, US_RIGHT_ECHO);
+
+    // --- Fase 0: retroceso durante 500 ms ---
+    if (phase == 0) {
+      Atras(VEL_RECUA);
+      if (millis() - startTime >= 500) {
+        startTime = millis(); // reinicia temporizador
+        phase = 1;
+      }
     }
-    // Pequeña pausa entre lecturas para estabilidad
+    // --- Fase 1: giro durante 400 ms ---
+    else if (phase == 1) {
+      GirarDerecha(VEL_GIRO);
+      if (millis() - startTime >= 400) {
+        stop();
+        break;
+      }
+    }
+
+    // Si detecta enemigo mientras retrocede o gira, cancelar evasión y atacar
+    if ((front > 0 && front < US_THRESHOLD_CM) ||
+        (left > 0 && left < US_THRESHOLD_CM) ||
+        (right > 0 && right < US_THRESHOLD_CM)) {
+      Serial.println("⚔️ Enemigo detectado durante evasión!");
+      Avanzar(VEL_MAX);
+      break;
+    }
+
+    // Evitar bloqueo
     delay(10);
   }
-  if(count == 0) return -1;
-  return sum / count;
+  return;
 }
 
-// Detecta obstáculo frente usando el ultrasonido (umbral configurable)
-bool DetectarObstaculoFront(){
-  long d = readUltrasonicAvg(US_TRIG_PIN, US_ECHO_PIN, US_SAMPLES);
-  if(DEBUG){
-    if(d>0) {
-      Serial.print("US avg cm: "); Serial.println(d);
-    } else {
-      Serial.println("US timeout / no lectura");
-    }
-  }
-  if(d > 0 && d <= US_OBSTACLE_THRESHOLD_CM) {
-    return true;
-  }
-  return false;
-}
 
-void loopDEV(){
-
-Serial.println(DetectarPiso(floorLeft));
-  
-}
-void loopxd(){
-
-  while(!DetectarObstaculoFront()){
-    while(DetectarObstaculo(delLeft)){
-      Evadir(100,2);
-      if(!DetectarObstaculo(delLeft)){break;}
-    }
-    while(DetectarObstaculo(delRigh)){
-      Evadir(100,1);
-      if(!DetectarObstaculo(delRigh)){break;}
-  }
-  stop();
-    
-  
-
-  }
-}
-void Evadir(float velocidad,int opcion){
-  /*
- Función Avanzar:
-   - velocidad: valor PWM (0 a 255)
-   - opcion:
-       0 -> ambos motores hacia adelante (avance)
-       1 -> giro a la derecha: motor derecho en reversa
-       2 -> giro a la izquierda: motor izquierdo hacia atras, motor derecho en reversa
-       3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
-  */
-    switch(opcion) {
-      case 0: // Avanzar recto
-         digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-      //DERECHA ADELANTE
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        break;
-      
-      case 1:
-       //motorIzquierdoAdelante
-       digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-      //motor derecho atras
-       digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-
-        break;
-      
-      case 2: 
-       //motor Izquierdo Atras
-        digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT,velocidad );
-      
-        //motor derecha adelante
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        
-        break;
-      
-      case 3: // Giro en el sitio (por ejemplo, giro a la derecha)
-      digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        break;
-      case 4: //rutina cuando vea la linea
-
-      Atras(140,500);
-      digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-      delay(300);
-
-
-
-     
-  }
-  delay(20);  // Pequeño retardo para estabilidad
-}
-void loopMotor(){
-  //izquierda adelante-
-       digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT, velocidad);
-        delay(2000);
-
-        stop();
-      //DERECHA ADELANTE
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(2000);
-
-        stop();
-  //IZQ ATRAS
-        digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-        delay(2000);
-
-        stop();
-      
-      //DERCHA ATRAS
-        digitalWrite(MPos_Righ, HIGH);
-        digitalWrite(MNeg_Righ, LOW);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(2000);
-
-        stop();
-        delay(5000);
-
-}
-
-//loopPrincipal
-void loop(){
-   if(DetectaBlanco(floorRigh) || DetectaBlanco(floorLeft)) {
-     Avanzar(80,4);
-  } else {
-    
-  if (DetectarObstaculoFront()) {
-    Avanzar(255, 0);   // Opción 0: avanzar recto
-    Serial.println("avanzar");
-  }
-  // Si no, si el sensor izquierdo detecta, gira a la derecha (para buscar que el frontal se alinee)
-  else if (DetectarObstaculo(delLeft)&& !DetectarObstaculoFront()) {
-    Avanzar(80, 2);   // Opción 2: giro a la derecha
-    Serial.println("activar izquierda");
-  }
-  // Si no, si el sensor derecho detecta, gira a la izquierda
-  else if (DetectarObstaculo(delRigh)&&!DetectarObstaculoFront()) {
-    Avanzar(80, 1);   // Opción 1: giro a la izquierda
-    Serial.println("giro derecha");
-  }
-  else if((DetectarObstaculo(delLeft)&&DetectarObstaculoFront())|| (DetectarObstaculo(delRigh)&&DetectarObstaculoFront())){
-     Avanzar(80, 0);   // Opción 0: avanzar recto
-    Serial.println("avanzar");
-  }
-  // Si ningún sensor detecta, gira en el sitio lentamente (buscando la señal del frontal)
+  // Estrategia de detección
+  if (front > 0 && front < US_THRESHOLD_CM) {
+    // Enemigo al frente → atacar
+    Avanzar(VEL_MAX);
+  } 
+  else if (left > 0 && left < US_THRESHOLD_CM) {
+    // Enemigo al lado izquierdo → girar hacia él
+    GirarIzquierda(VEL_GIRO);
+  } 
+  else if (right > 0 && right < US_THRESHOLD_CM) {
+    // Enemigo al lado derecho → girar hacia él
+    GirarDerecha(VEL_GIRO);
+  } 
   else {
-    if(ButonPush(DipSwith2)){
-      Avanzar(80,0);
+    if(digitalRead(DipSwitch1) == HIGH){
+      // No hay enemigo → buscar
+      GirarIzquierda(VEL_GIRO / 2);
     }
-    else{
-    Avanzar(80, 3);   // Opción 3: giro en el sitio
-    Serial.println("girar sitio");}
+    else
+    // No hay enemigo → buscar
+    GirarDerecha(VEL_GIRO / 2);
   }
-  }
-  delay(10);
-  
-}
-void Atras(float velocidad,int tiempo){
-           digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT, velocidad);
-      
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        delay(tiempo);
-}
-void stop(){
-  digitalWrite(MPos_Left,LOW);
-  digitalWrite(MNeg_Left,LOW);
-  analogWrite(PWM_LEFT,0);
 
-  digitalWrite(MPos_Righ,LOW);
-  digitalWrite(MPos_Righ,LOW);
-  analogWrite(PWM_RIGH,0);
-}
-void Avanzar(float velocidad, int opcion){    
-  /*
- Función Avanzar:
-   - velocidad: valor PWM (0 a 255)
-   - opcion:
-       0 -> ambos motores hacia adelante (avance)
-       1 -> giro a la izquierda: motor izquierdo en reversa, motor derecho hacia adelante
-       2 -> giro a la derecha: motor izquierdo hacia adelante, motor derecho en reversa
-       3 -> giro en el sitio: motores en direcciones opuestas a velocidad moderada
-  */
-    switch(opcion) {
-      case 0: 
-      
-      
-      // Avanzar recto
-         digitalWrite(MPos_Left,  LOW);
-        digitalWrite(MNeg_Left, HIGH);
-        analogWrite(PWM_LEFT, velocidad);
-      //DERECHA ADELANTE
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-
-        break;
-      
-      case 1: // Giro a la izquierda
-       //izquierda adelante-
-       digitalWrite(MPos_Left, LOW);
-        digitalWrite(MNeg_Left, HIGH);//LOW
-        analogWrite(PWM_LEFT, 20);
-
-       digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-
-        break;
-      
-      case 2: // Giro a la derecha
-        digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT,velocidad );
-      
-        //DERECHA ADELANTE
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, 20);
-        
-        break;
-      
-      case 3: // Giro en el sitio (por ejemplo, giro a la derecha)
-      digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-        break;
-      case 4: //rutina cuando vea la linea
-
-      Atras(140,1000);
-        digitalWrite(MPos_Left, HIGH);
-        digitalWrite(MNeg_Left, LOW);
-        analogWrite(PWM_LEFT, velocidad);
-
-        digitalWrite(MPos_Righ, LOW);
-        digitalWrite(MNeg_Righ, HIGH);
-        analogWrite(PWM_RIGH, velocidad);
-
-      delay(100);
-
-
-
-     
-  }
-  delay(20);  // Pequeño retardo para estabilidad
+  delay(20);
 }
