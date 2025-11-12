@@ -85,17 +85,34 @@ bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
 bool Vl53x(int distancia){return distancia<500?true:false;}
 const int DISTANCIA_MAX= 200;
 
-void loop() {
-  if (digitalRead(4) == 1) {
+void loop(){
+  if(digitalRead(4)){
+    loopMain();
+
+  }
+  else{
+    stop();
+  }
+  stop();
+}
+
+void loopMain() {
      // Botón de inicio
-    int distancia = sensor.readRangeContinuousMillimeters();
+     sensor.setTimeout(200);
+  uint16_t distancia = sensor.readRangeContinuousMillimeters();
+  if (sensor.timeoutOccurred()) {
+    Serial.println("VL53L0X no responde, reiniciando...");
+    sensor.init(); // reinicia el sensor  
+    }
+
     bool pisoIzq = DetectaBlanco(floorLeft);
     bool pisoDer = DetectaBlanco(floorRigh);
     bool obstIzq = DetectarObstaculo(delLeft);
     bool obstDer = DetectarObstaculo(delRigh);
    
-    // 🔹 1. EVITAR SALIR DEL DOYO
+  /* // 🔹 1. EVITAR SALIR DEL DOYO
    if (pisoIzq || pisoDer) {
+    Serial.println("PISO IZQUIERDA O DERECHA");
     Atras(220, 300);            // retrocede
     (random(0, 2) == 0) ? Avanzar(200, 1) : Avanzar(200, 2);
     delay(300);
@@ -117,6 +134,7 @@ void loop() {
       delay(30);
       return;
       }
+      */
 
     // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
     if (obstIzq && !obstDer) {
@@ -151,15 +169,11 @@ void loop() {
       stop();
       return;
   }
+  
   // 🔹 3. Si no detecta nada → buscar
     Avanzar(50, 0);
     delay(30);
-  }
-  else{
-  stop();
-  delay(30);
-  }
-  stop();
+    stop();
 }
 
 
