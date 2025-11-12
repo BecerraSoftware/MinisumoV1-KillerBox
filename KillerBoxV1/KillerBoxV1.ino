@@ -72,7 +72,7 @@ void setup() {
   pinMode(DipSwitch1, INPUT);
   pinMode(DipSwitch2, INPUT);
   stop();
-  Serial.println("KILLERBOX listo!");
+  Serial.println("yuhaaaaniiiii");
   delay(500); //Aqui cambiar para lo del SECIHTI 
   
   
