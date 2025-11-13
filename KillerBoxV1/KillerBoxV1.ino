@@ -1,6 +1,4 @@
 #include <Wire.h>
-#include <VL53L0X.h>
-VL53L0X sensor;
 
 /*
   Código para el robot mini sumo-- KILLERBOX
@@ -13,6 +11,7 @@ VL53L0X sensor;
 
 #define delLeft A2
 #define delRigh A6
+#define delForward A1
 
 //Cuenta con dos sensores de piso que detectan el color blanco para no salir del ring
 #define floorLeft A0
@@ -42,17 +41,6 @@ se efectua
 
 
 void setup() {
-    //Sensor para vl53x
-    Wire.begin();
-    if (!sensor.init()) {
-    while (1);
-  }
-  sensor.setTimeout(500);
-
-  sensor.setMeasurementTimingBudget(90000);
-  sensor.startContinuous(0);
-
- 
   
   //SENSORES
   pinMode(delRigh,INPUT);
@@ -82,66 +70,59 @@ void setup() {
 bool DetectaBlanco(int pin){return analogRead(pin)<BLANCO;}
 int DetectarPiso(int pin){return analogRead(pin);}
 bool DetectarObstaculo(int pin){return analogRead(pin)>500?1:0;}
-bool Vl53x(int distancia){return distancia<500?true:false;}
-const int DISTANCIA_MAX= 200;
 
-void loop() {
-  if (digitalRead(4) == 1) {
-     // Botón de inicio
-    int distancia = sensor.readRangeContinuousMillimeters();
+void loop(){
+  Serial.println(DetectarObstaculo());
+}
+
+void loopMAIN() {
+  if (digitalRead(4) == 1) {  // Botón de inicio
+
+    bool obstAde = DetectarObstaculo(delForward);
     bool pisoIzq = DetectaBlanco(floorLeft);
     bool pisoDer = DetectaBlanco(floorRigh);
     bool obstIzq = DetectarObstaculo(delLeft);
     bool obstDer = DetectarObstaculo(delRigh);
-   
+
     // 🔹 1. EVITAR SALIR DEL DOYO
-   if (pisoIzq || pisoDer) {
-    Atras(220, 300);            // retrocede
-    (random(0, 2) == 0) ? Avanzar(200, 1) : Avanzar(200, 2);
-    delay(300);
-    stop();
-    return;
-      } 
-
-    // 🔹 2. LÓGICA DE PERSECUCIÓN Y ATAQUE
-    if (Vl53x(distancia)) {
-      // Si ya ve al enemigo con el VL53X, avanza directo
-      Avanzar(255, 0);
-      delay(30); // seguridad
-      return;
-      }
-
-    // Si detecta ambos sensores frontales → enemigo al frente
-    if (obstIzq && obstDer) {
-      Avanzar(230, 0);
-      delay(30);
-      return;
-      }
-
-    // Si detecta solo el sensor izquierdo → girar hasta verlo con el VL53X
-    if (obstIzq && !obstDer) {
+    if (pisoIzq || pisoDer) {
+      Atras(220, 300);
+      
       unsigned long startTime = millis();
-      while (millis() - startTime < 1000) { // evita que se quede trabado
-        Avanzar(80, 2);  // Gira a la izquierda
-        int distanciaTemp = sensor.readRangeContinuousMillimeters();
-        if (Vl53x(distanciaTemp)) {
-          Avanzar(255, 0);
-          delay(50);
-          break;
+      if (random(0, 2) == 0) { // Gira izquierda o derecha aleatoriamente
+        while (millis() - startTime < 300 && !DetectarObstaculo(delForward)) {
+          Avanzar(200, 1); // Giro derecha
+          if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
         }
-        if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break; // seguridad
+      } else {
+        while (millis() - startTime < 300 && !DetectarObstaculo(delForward)) {
+          Avanzar(200, 2); // Giro izquierda
+          if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
+        }
       }
       stop();
       return;
     }
+  
+    // 🔹 2. LÓGICA DE PERSECUCIÓN Y ATAQUE
+    if (obstAde) {
+      Avanzar(255, 0);
+      delay(30);
+      return;
+    }
 
-  // Si detecta solo el sensor derecho → girar hasta verlo con el VL53X
-    if (obstDer && !obstIzq) {
+    if (obstIzq && obstDer) {
+      Avanzar(230, 0);
+      delay(30);
+      return;
+    }
+
+    // 🔹 Giro por detección lateral izquierda
+    if (obstIzq && !obstDer) {
       unsigned long startTime = millis();
       while (millis() - startTime < 1000) {
-        Avanzar(80, 1);  // Gira a la derecha
-        int distanciaTemp = sensor.readRangeContinuousMillimeters();
-        if (Vl53x(distanciaTemp)) {
+        Avanzar(80, 2);
+        if (DetectarObstaculo(delForward)) {
           Avanzar(255, 0);
           delay(50);
           break;
@@ -150,17 +131,43 @@ void loop() {
       }
       stop();
       return;
+    }
+
+    // 🔹 Giro por detección lateral derecha
+    if (obstDer && !obstIzq) {
+      unsigned long startTime = millis();
+      while (millis() - startTime < 1000) {
+        Avanzar(80, 1);
+        if (DetectarObstaculo(delForward)) {
+          Avanzar(255, 0);
+          delay(50);
+          break;
+        }
+        if (DetectaBlanco(floorLeft) || DetectaBlanco(floorRigh)) break;
+      }
+      stop();
+      return;
+    }
+
+    // 🔹 3. BÚSQUEDA (gira lentamente hasta encontrar algo)
+    unsigned long startTime = millis();
+    while (millis() - startTime < 200) {
+      if(random(0, 2) == 0){
+        Avanzar(60, 1); // Gira lentamente a la derecha
+      }
+      else{
+        Avanzar(60,2);
+      }
+      if (DetectarObstaculo(delForward) || DetectarObstaculo(delLeft) || DetectarObstaculo(delRigh))
+        break;
+    }
+    stop();
+  } 
+  else {
+    stop();
   }
-  // 🔹 3. Si no detecta nada → buscar
-    Avanzar(50, 0);
-    delay(30);
-  }
-  else{
-  stop();
-  delay(30);
-  }
-  stop();
 }
+
 
 
 
